@@ -24,8 +24,10 @@ pip install -r requirements.txt
 
 
 # 4.(( https://drive.google.com/u/0/uc?id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe&export=download ))
+mkdir datastore
+cd datastore
 wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe" -O coco_index && rm -rf /tmp/cookies.txt
-
+cd cd../
 
 
 # 5. (( https://drive.google.com/file/d/1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR/view
@@ -61,7 +63,7 @@ mkdir features
 python src/extract_features.py
 
 # 10.
-python src/retrieve_captions.py
+python src/retrieve_caps.py
 
 
 # 11. Model training

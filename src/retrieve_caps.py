@@ -30,13 +30,14 @@ def filter_captions(data):
 
     decoder_name = 'gpt2'
     tokenizer = AutoTokenizer.from_pretrained(decoder_name)
+    tokenizer.pad_token = tokenizer.eos_token
     bs = 512
 
     image_ids = [d['image_id'] for d in data]
     caps = [d['caption'] for d in data]
     encodings = []
     for idx in range(0, len(data), bs):
-        encodings += tokenizer.batch_encode_plus(caps[idx:idx+bs], return_tensors='np')['input_ids'].tolist()
+        encodings += tokenizer.batch_encode_plus(caps[idx:idx+bs], return_tensors='np', padding=True)['input_ids'].tolist()
     
     filtered_image_ids, filtered_captions = [], []
 
@@ -50,6 +51,9 @@ def filter_captions(data):
 
 def encode_captions(captions, model, device):
 
+    if os.path.exists('encoded_captions.npy'):
+        return np.load('encoded_captions.npy')
+    
     bs = 256
     encoded_captions = []
 
@@ -59,13 +63,17 @@ def encode_captions(captions, model, device):
             encoded_captions.append(model.encode_text(input_ids).cpu().numpy())
 
     encoded_captions = np.concatenate(encoded_captions)
-
+    np.save('encoded_captions.npy', encoded_captions)
+    
     return encoded_captions
 
 def encode_images(images, image_path, model, feature_extractor, device):
 
     image_ids = [i['image_id'] for i in images]
-    
+
+    if os.path.exists('image_features.npy'):
+        return image_ids, np.load('image_features.npy')
+     
     bs = 64	
     image_features = []
     
@@ -76,7 +84,8 @@ def encode_images(images, image_path, model, feature_extractor, device):
             image_features.append(model.encode_image(torch.tensor(np.stack(image_input)).to(device)).cpu().numpy())
 
     image_features = np.concatenate(image_features)
-
+    np.save('image_features.npy', image_features)
+    
     return image_ids, image_features
 
 def get_nns(captions, images, k=15):
@@ -95,7 +104,7 @@ def filter_nns(nns, xb_image_ids, captions, xq_image_ids):
     retrieved_captions = {}
     for nns_list, image_id in zip(nns, xq_image_ids):
         good_nns = []
-        for nn in zip(nns_list):
+        for nn in nns_list:
             if xb_image_ids[nn] == image_id:
                 continue
             good_nns.append(captions[nn])
@@ -130,6 +139,7 @@ def main():
     retrieved_caps = filter_nns(nns, xb_image_ids, captions, xq_image_ids)
 
     print('Writing files')
+    breakpoint()
     faiss.write_index(index, "datastore/coco_index")
     json.dump(captions, open('datastore/coco_index_captions.json', 'w'))
 
