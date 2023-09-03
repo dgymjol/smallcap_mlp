@@ -1,70 +1,123 @@
 
 
-# https://github.com/dgymjol/smallcap_mlp.git
+# # https://github.com/dgymjol/smallcap_mlp.git
 
-# sudo apt-get install libgl1-mesa-glx libglib2.0-0 libgl1
+# # sudo apt-get install libgl1-mesa-glx libglib2.0-0 libgl1
+# # sudo apt-get install default-jre
 
-# git config --global user.email dgymjol@yonsei.ac.kr
-# git config --global user.name dgymjol
-
-
-# 1. 
-conda create -n smallcap
-conda activate smallcap
-
-# 2. 
-# for 1080
-# conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=10.2 -c pytorch
-# for 3090
-conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+# # git config --global user.email dgymjol@yonsei.ac.kr
+# # git config --global user.name dgymjol
 
 
-# 3.
-pip install -r requirements.txt
+# # 1. 
+# conda create -n smallcap
+# conda activate smallcap
+
+# conda create -n smallcap2 --clone smallcap
+# conda activate smallcap
+# pip install transformers==4.30.2
+
+# # 2. 
+# # for 1080
+# # conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=10.2 -c pytorch
+# # for 3090
+# conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
 
 
-# 4.(( https://drive.google.com/u/0/uc?id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe&export=download ))
-mkdir datastore
-cd datastore
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe" -O coco_index && rm -rf /tmp/cookies.txt
-cd cd../
+# # 3.
+# pip install -r requirements.txt
 
 
-# 5. (( https://drive.google.com/file/d/1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR/view
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR" -O coco_index_captions.json && rm -rf /tmp/cookies.txt
+# # 4.(( https://drive.google.com/u/0/uc?id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe&export=download ))
+# mkdir datastore
+# cd datastore
+# wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1ZP5I-xbjaNU7cU48C_ctHd95SaA0jBHe" -O coco_index && rm -rf /tmp/cookies.txt
+# cd cd../
 
 
-# 6. file dataset_coco.json from here and place it in data/.
+# # 5. (( https://drive.google.com/file/d/1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR/view
+# wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1BT0Qc6g40fvtnJ_yY0aipfCuCMgu5qaR" -O coco_index_captions.json && rm -rf /tmp/cookies.txt
 
 
-# 7. download coco dataset 
+# # 6. file dataset_coco.json from here and place it in data/.
 
-curl -O http://images.cocodataset.org/zips/val2017.zip
-curl -O http://images.cocodataset.org/zips/train2017.zip 
-curl -O http://images.cocodataset.org/zips/test2017.zip 
+# # 6-1. 
+# cd coco-caption
+# bash get_stanford_models.sh
+# cd ../
 
-unzip val2017.zip
-unzip train2017.zip
-unzip test2017.zip
+# # 7. download coco dataset 
 
-mv val2017/*.jpg train2017
-mv test2017/*.jpg train2017
+# curl -O http://images.cocodataset.org/zips/val2017.zip
+# curl -O http://images.cocodataset.org/zips/train2017.zip 
+# curl -O http://images.cocodataset.org/zips/test2017.zip 
 
-rm -rf val2017
-rm -rf test2017
+# unzip val2017.zip
+# unzip train2017.zip
+# unzip test2017.zip
 
-mv train2017 data/images
+# mv val2017/*.jpg train2017
+# mv test2017/*.jpg train2017
 
-# 8.
-pip install git+https://github.com/openai/CLIP.git
+# rm -rf val2017
+# rm -rf test2017
 
-# 9.
-mkdir features
-python src/extract_features.py
+# mv train2017 data/images
 
-# 10.
-python src/retrieve_caps.py
+# # 8.
+# pip install git+https://github.com/openai/CLIP.git
+
+# # 9.
+# mkdir features
+# python src/extract_features.py
+
+# # 10.
+# python src/retrieve_caps.py
 
 
-# 11. Model training
+# # 11. Model training
 python train.py
+
+# # 12. Inference (val set) (If you specify --infer_test inference uses test data, else val data is used.)
+# python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-15498
+# python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-17712
+# python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-19926
+# python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-22140
+
+
+# # 14. Evaluate
+# python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-15498/val_preds.json
+# python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-17712/val_preds.json
+# python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-19926/val_preds.json
+# python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-22140/val_preds.json
+
+# # 15. test the best checkpoint in val results
+
+# python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-15498 --infer_test
+# python coco-caption/run_eval.py coco-caption/annotations/captions_testKarpathy.json experiments/rag_7M_gpt2/checkpoint-15498/test_preds.json
+
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-8856
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-17712
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-26568
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-35424
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-44280
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-53136
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-61992
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-70848
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-79704
+python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-88560
+
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-17712/val_preds.json > val_result/result_17712.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-26568/val_preds.json > val_result/result_26568.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-35424/val_preds.json > val_result/result_35424.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-44280/val_preds.json > val_result/result_44280.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-53136/val_preds.json > val_result/result_53136.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-61992/val_preds.json > val_result/result_61992.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-70848/val_preds.json > val_result/result_70848.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-79704/val_preds.json > val_result/result_79704.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-88560/val_preds.json > val_result/result_88560.txt
+python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-8856/val_preds.json > val_result/result_8856.txt
+
+# best : 70848 (CIDER : 116.00)
+# python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-70848 --infer_test
+# python coco-caption/run_eval.py coco-caption/annotations/captions_testKarpathy.json experiments/rag_7M_gpt2/checkpoint-70848/test_preds.json

@@ -30,14 +30,13 @@ def filter_captions(data):
 
     decoder_name = 'gpt2'
     tokenizer = AutoTokenizer.from_pretrained(decoder_name)
-    tokenizer.pad_token = tokenizer.eos_token
     bs = 512
 
     image_ids = [d['image_id'] for d in data]
     caps = [d['caption'] for d in data]
     encodings = []
     for idx in range(0, len(data), bs):
-        encodings += tokenizer.batch_encode_plus(caps[idx:idx+bs], return_tensors='np', padding=True)['input_ids'].tolist()
+        encodings += tokenizer.batch_encode_plus(caps[idx:idx+bs], return_tensors='np')['input_ids'].tolist()
     
     filtered_image_ids, filtered_captions = [], []
 
@@ -73,7 +72,7 @@ def encode_images(images, image_path, model, feature_extractor, device):
 
     if os.path.exists('image_features.npy'):
         return image_ids, np.load('image_features.npy')
-     
+    
     bs = 64	
     image_features = []
     
@@ -139,7 +138,6 @@ def main():
     retrieved_caps = filter_nns(nns, xb_image_ids, captions, xq_image_ids)
 
     print('Writing files')
-    breakpoint()
     faiss.write_index(index, "datastore/coco_index")
     json.dump(captions, open('datastore/coco_index_captions.json', 'w'))
 
@@ -152,4 +150,3 @@ if __name__ == '__main__':
 
 
     
-
