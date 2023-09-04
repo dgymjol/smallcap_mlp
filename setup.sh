@@ -69,14 +69,17 @@
 
 # # 9.
 # mkdir features
+# conda activate smallcap
 # python src/extract_features.py
 
-# # 10.
+# # 10. (MUST BE transformers 4.30.2)
+# conda activate smallcap2
 # python src/retrieve_caps.py
 
 
-# # 11. Model training
-python train.py
+# # 11. Model training (MUST BE transformers 4.21.1)
+# conda activate smallcap
+CUDA_VISIBLE_DEVICES=0 python train.py
 
 # # 12. Inference (val set) (If you specify --infer_test inference uses test data, else val data is used.)
 # python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-15498
@@ -96,27 +99,27 @@ python train.py
 # python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-15498 --infer_test
 # python coco-caption/run_eval.py coco-caption/annotations/captions_testKarpathy.json experiments/rag_7M_gpt2/checkpoint-15498/test_preds.json
 
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-8856
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-17712
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-26568
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-35424
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-44280
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-53136
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-61992
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-70848
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-79704
-python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-88560
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-8856
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-17712
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-26568
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-35424
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-44280
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-53136
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-61992
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-70848
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-79704
+CUDA_VISIBLE_DEVICES=0 python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-88560
 
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-17712/val_preds.json > val_result/result_17712.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-26568/val_preds.json > val_result/result_26568.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-35424/val_preds.json > val_result/result_35424.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-44280/val_preds.json > val_result/result_44280.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-53136/val_preds.json > val_result/result_53136.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-61992/val_preds.json > val_result/result_61992.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-70848/val_preds.json > val_result/result_70848.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-79704/val_preds.json > val_result/result_79704.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-88560/val_preds.json > val_result/result_88560.txt
-python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-8856/val_preds.json > val_result/result_8856.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-17712/val_preds.json > val_result/result_17712.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-26568/val_preds.json > val_result/result_26568.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-35424/val_preds.json > val_result/result_35424.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-44280/val_preds.json > val_result/result_44280.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-53136/val_preds.json > val_result/result_53136.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-61992/val_preds.json > val_result/result_61992.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-70848/val_preds.json > val_result/result_70848.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-79704/val_preds.json > val_result/result_79704.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-88560/val_preds.json > val_result/result_88560.txt
+CUDA_VISIBLE_DEVICES=0 python coco-caption/run_eval.py coco-caption/annotations/captions_valKarpathy.json experiments/rag_7M_gpt2/checkpoint-8856/val_preds.json > val_result/result_8856.txt
 
 # best : 70848 (CIDER : 116.00)
 # python infer.py --model_path experiments/rag_7M_gpt2 --checkpoint_path checkpoint-70848 --infer_test
