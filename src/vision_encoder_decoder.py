@@ -21,7 +21,7 @@ import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers.configuration_utils import PretrainedConfig
-from transformers.modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
+from transformers.modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, Seq2SeqLMOutput
 from transformers.modeling_utils import PreTrainedModel
 #from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from transformers.utils import logging
@@ -36,6 +36,10 @@ from .xglm import ThisXGLMForCausalLM
 from .xglm import ThisXGLMConfig
 from .opt import ThisOPTForCausalLM
 from .opt import ThisOPTConfig
+
+from transformers.modeling_outputs import BaseModelOutputWithPooling
+from transformers import AutoTokenizer, CLIPTextModel
+from transformers.models.clip.modeling_clip import _expand_mask
 
 # Copied from transformers.models.encoder_decoder.modeling_encoder_decoder.shift_tokens_right
 def shift_tokens_right(input_ids: torch.Tensor, pad_token_id: int, decoder_start_token_id: int):
@@ -149,6 +153,48 @@ VISION_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
             - Without a prefix which will be input as `**encoder_kwargs` for the encoder forward function.
             - With a *decoder_* prefix which will be input as `**decoder_kwargs` for the decoder forward function.
 """
+    
+class IM2TEXT(nn.Module):
+    def __init__(self, embed_dim=512, middle_dim=512, output_dim=512, n_layer=2, dropout=0.1):
+        super().__init__()
+        self.fc_out = nn.Linear(middle_dim, output_dim)
+        layers = []
+        dim = embed_dim
+        for _ in range(n_layer):
+            block = []
+            block.append(nn.Linear(dim, middle_dim))
+            block.append(nn.Dropout(dropout))
+            block.append(nn.ReLU())            
+            dim = middle_dim
+            layers.append(nn.Sequential(*block))        
+        self.layers = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor):
+        for layer in self.layers:
+            x = layer(x)
+        return self.fc_out(x)
+
+class TextProjection(nn.Module):
+    def __init__(self, embed_dim=512, middle_dim=512, output_dim=768, n_layer=1, dropout=0.1):
+        super().__init__()
+        self.fc_out = nn.Linear(middle_dim, output_dim)
+        layers = []
+        dim = embed_dim
+        for _ in range(n_layer):
+            block = []
+            block.append(nn.Linear(dim, middle_dim))
+            block.append(nn.Dropout(dropout))
+            block.append(nn.ReLU())            
+            dim = middle_dim
+            layers.append(nn.Sequential(*block))        
+        self.layers = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor):
+        for layer in self.layers:
+            x = layer(x)
+        return self.fc_out(x)
+
+
 
 class SmallCapConfig(VisionEncoderDecoderConfig):
     model_type = "smallcap"
@@ -212,6 +258,15 @@ class SmallCap(PreTrainedModel):
         # so that the updates to the config will be synced
         self.encoder.config = self.config.encoder
         self.decoder.config = self.config.decoder
+
+        self.img2text = IM2TEXT()
+        self.clip_text_model = CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.clip_tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+        self.vocab_size = self.clip_text_model.config.vocab_size
+        self.end_id = self.vocab_size - 1
+        self.context_length=77
+
+        self.text_projection = TextProjection()
 
     def get_encoder(self):
         return self.encoder
@@ -410,6 +465,71 @@ class SmallCap(PreTrainedModel):
         config.tie_word_embeddings = False
         return cls(encoder=encoder, decoder=decoder, config=config)
 
+    def encode_text_img(self, text_inputs, img_tokens):
+        input_ids = torch.cat([text_inputs.input_ids, torch.zeros((1, 72))], dim=1).type(torch.LongTensor).cuda()
+        input_ids = input_ids.view(1, -1)
+        input_ids = input_ids.repeat(img_tokens.size(0), 1)
+        input_shape = input_ids.size()
+        input_ids = input_ids.view(-1, input_shape[-1])
+        
+        output_attentions = self.clip_text_model.text_model.config.output_attentions
+        output_hidden_states = (
+            self.clip_text_model.text_model.config.output_hidden_states
+        )
+        return_dict = self.clip_text_model.text_model.config.use_return_dict
+
+        ########## self.clip_text_model.text_model.embeddings : CLIPTextEmbeddings (/home/intern06/.conda/envs/smallcap/lib/python3.9/site-packages/transformers/models/clip/modeling_clip.py)
+        bsz, seq_len = input_shape
+
+        position_ids = self.clip_text_model.text_model.embeddings.position_ids[:, :seq_len]
+        inputs_embeds = self.clip_text_model.text_model.embeddings.token_embedding(input_ids) # x = self.token_embedding(text)
+        
+        collect_ind = input_ids == self.end_id  # collect_ind = text == self.end_id 
+        collect_ind = collect_ind.nonzero()[:, 1]
+        img_tokens = img_tokens.view(bsz, 1, -1)    
+
+        inputs_embeds = torch.cat([inputs_embeds[:, :collect_ind[0]], img_tokens, inputs_embeds[:, collect_ind[0]:-1]], dim=1) # x = torch.cat([x[:, :collect_ind[0]], img_tokens, x[:, collect_ind[0]:-1]], dim=1)
+
+        position_embeddings = self.clip_text_model.text_model.embeddings.position_embedding(position_ids)
+        embeddings = inputs_embeds + position_embeddings # x = x + self.positional_embedding.type(self.dtype)
+
+        hidden_states = embeddings
+
+        ########### self.clip_text_model.text_model : CLIPTextTransformer (/home/intern06/.conda/envs/smallcap/lib/python3.9/site-packages/transformers/models/clip/modeling_clip.py)
+        # CLIP's text self.clip_text_model uses causal mask, prepare it here.
+        # https://github.com/openai/CLIP/blob/cfcffb90e69f37bf2ff1e988237a0fbe41f33c04/clip/model.py#L324
+        causal_attention_mask = self.clip_text_model.text_model._build_causal_attention_mask(bsz, seq_len, hidden_states.dtype).to(
+            hidden_states.device
+        )
+
+        # expand attention_mask
+        # if attention_mask is not None:
+        #     # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+        #     attention_mask = _expand_mask(attention_mask, hidden_states.dtype)
+        mask = torch.empty(self.context_length, self.context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # zero out the lower diagonal
+        attention_mask = mask.expand(bsz, 1, self.context_length, self.context_length).cuda()
+
+        encoder_outputs = self.clip_text_model.text_model.encoder(
+            inputs_embeds=hidden_states,
+            attention_mask=attention_mask,
+            causal_attention_mask=causal_attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        last_hidden_state = encoder_outputs[0]
+        last_hidden_state = self.clip_text_model.text_model.final_layer_norm(last_hidden_state)
+
+        return BaseModelOutput(
+            last_hidden_state=last_hidden_state,
+            hidden_states=encoder_outputs.hidden_states,
+            attentions=encoder_outputs.attentions,
+        )
+
+
     def forward(
         self,
         pixel_values=None,
@@ -466,23 +586,18 @@ class SmallCap(PreTrainedModel):
         kwargs_decoder = {
             argument[len("decoder_") :]: value for argument, value in kwargs.items() if argument.startswith("decoder_")
         }
-        if encoder_outputs is None:
-            if pixel_values is None:
-                raise ValueError("You have to specify pixel_values")
-            
-            encoder_outputs = self.encoder(
-                pixel_values=pixel_values,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-                **kwargs_encoder,
-            )
-        elif isinstance(encoder_outputs, tuple):
-            encoder_outputs = BaseModelOutput(*encoder_outputs)
-        else:
-            encoder_outputs = BaseModelOutput(encoder_outputs, None)
 
-        encoder_hidden_states = encoder_outputs[0]
+        if isinstance(encoder_outputs, BaseModelOutput) or isinstance(encoder_outputs, BaseModelOutputWithPooling):
+            encoder_outputs = encoder_outputs[0]
+
+        token_features = self.img2text(encoder_outputs) 
+
+        with torch.no_grad():
+            text_inputs = self.clip_tokenizer(["a photo of"], padding=True, return_tensors="pt")
+            encoder_outputs = self.encode_text_img(text_inputs, token_features)  # (64, 77, 512)
+            encoder_hidden_states = encoder_outputs[0] # last_hidden_state
+
+        encoder_hidden_states = self.text_projection(encoder_hidden_states) # (64, 77, 512) -> (64, 77, 768)
 
         # else:
         encoder_attention_mask = None

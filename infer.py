@@ -7,7 +7,7 @@ from PIL import Image
 import h5py
 from PIL import ImageFile
 import torch
-from transformers import AutoTokenizer, CLIPFeatureExtractor, AutoModel
+from transformers import AutoTokenizer, CLIPFeatureExtractor, CLIPModel, CLIPProcessor, AutoModel
 from transformers.models.auto.configuration_auto import AutoConfig
 from transformers.modeling_outputs import BaseModelOutput
 
@@ -44,7 +44,7 @@ def evaluate_norag_model(args, feature_extractor, tokenizer, model, eval_df):
 
     return out
 
-def evaluate_rag_model(args, feature_extractor, tokenizer, model, eval_df):
+def evaluate_rag_model(args, clipmodel, processor, tokenizer, model, eval_df):
     """RAG models can only be evaluated with a batch of length 1."""
     
     template = open(args.template_path).read().strip() + ' '
@@ -61,7 +61,15 @@ def evaluate_rag_model(args, feature_extractor, tokenizer, model, eval_df):
                                                  k=int(args.k), is_test=True)
         # load image
         if args.features_path is not None:
-            encoder_last_hidden_state = torch.FloatTensor([features[image_id][()]])
+            encoder_last_hidden_state = torch.tensor(features[image_id][()]).unsqueeze(dim=0).cuda()
+            # img_features = torch.tensor(features[image_id][()]).unsqueeze(dim=0).cuda()
+            # token_features = model.img2text(img_features) # encoder_last_hidden_state = torch.FloatTensor([features[image_id][()]])
+            # text_inputs = model.clip_tokenizer(["a photo of"], padding=True, return_tensors="pt")
+            # encoder_outputs = model.encode_text_img(text_inputs, token_features)  # (1, 77, 512)
+            # encoder_last_hidden_state = encoder_outputs[0] # last_hidden_state
+            # encoder_last_hidden_state = model.text_projection(encoder_last_hidden_state) # (1, 77, 512) -> (1, 77, 768)
+
+            
             encoder_outputs = BaseModelOutput(last_hidden_state=encoder_last_hidden_state.to(args.device))
             with torch.no_grad():
                 pred = model.generate(encoder_outputs=encoder_outputs,
@@ -69,9 +77,12 @@ def evaluate_rag_model(args, feature_extractor, tokenizer, model, eval_df):
                                **args.generation_kwargs)
         else:
             image = Image.open(args.images_dir + file_name).convert("RGB")
-            pixel_values = feature_extractor(image, return_tensors="pt").pixel_values
+            inputs = processor(images=image, return_tensors="pt").to(args.device)
+
             with torch.no_grad():
-                pred = model.generate(pixel_values.to(args.device),
+                image_features = clipmodel.get_image_features(**inputs)
+                encoder_outputs = BaseModelOutput(image_features)
+                pred = model.generate(encoder_outputs=encoder_outputs,
                                decoder_input_ids=torch.tensor([decoder_input_ids]).to(args.device),
                                **args.generation_kwargs)
         pred = tokenizer.decode(pred[0])
@@ -89,9 +100,9 @@ def load_model(args, checkpoint_path):
     model.to(args.device)
     return model
 
-def infer_one_checkpoint(args, feature_extractor, tokenizer, checkpoint_path, eval_df, infer_fn):
+def infer_one_checkpoint(args, clipmodel, processor, tokenizer, checkpoint_path, eval_df, infer_fn):
     model = load_model(args, checkpoint_path)
-    preds = infer_fn(args, feature_extractor, tokenizer, model, eval_df)
+    preds = infer_fn(args, clipmodel, processor, tokenizer, model, eval_df)
     with open(os.path.join(checkpoint_path, args.outfile_name), 'w') as outfile:
         json.dump(preds, outfile)
 
@@ -130,6 +141,8 @@ def main(args):
         feature_extractor = None
     else:
         feature_extractor = CLIPFeatureExtractor.from_pretrained(args.encoder_name)
+        clipmodel = CLIPModel.from_pretrained(args.encoder_name).to(args.device)
+        processor = CLIPProcessor.from_pretrained(args.encoder_name)
 
     if args.disable_rag:
         args.k=0
@@ -159,7 +172,7 @@ def main(args):
     # run inference once if checkpoint specified else run for all checkpoints
     if args.checkpoint_path is not None:
         checkpoint_path = os.path.join(args.model_path, args.checkpoint_path)
-        infer_one_checkpoint(args, feature_extractor, tokenizer, checkpoint_path, eval_df, infer_fn)
+        infer_one_checkpoint(args, clipmodel, processor, tokenizer, checkpoint_path, eval_df, infer_fn)
     else:
         for checkpoint_path in os.listdir(args.model_path):
             if 'runs' in checkpoint_path:
@@ -168,13 +181,13 @@ def main(args):
             if os.path.exists(os.path.join(checkpoint_path, args.outfile_name)):
                 print('Found existing file for', checkpoint_path)
             else:
-                infer_one_checkpoint(args, feature_extractor, tokenizer, checkpoint_path, eval_df, infer_fn)
+                infer_one_checkpoint(args, clipmodel, processor, tokenizer, checkpoint_path, eval_df, infer_fn)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Model Training')
     parser.add_argument("--images_dir", type=str, default="data/images/", help="Directory where input image features are stored")
-    parser.add_argument("--features_path", type=str, default='features/val.hdf5', help="H5 file with cached input image features")
+    parser.add_argument("--features_path", type=str, default='image_features/val.hdf5', help="H5 file with cached input image features")
     parser.add_argument("--annotations_path", type=str, default="data/dataset_coco.json", help="JSON file with annotations in Karpathy splits")
         
     parser.add_argument("--model_path", type=str, default=None, help="Path to model to use for inference")

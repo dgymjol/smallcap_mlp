@@ -69,7 +69,8 @@ def get_model_and_auxiliaries(args):
     # freeze parameters
     for param in model.encoder.parameters():
         param.requires_grad = False
-
+    for param in model.clip_text_model.parameters():
+        param.requires_grad = False
     if "xglm" in args.decoder_name or "opt" in args.decoder_name:
         if not args.train_decoder:
                 for name, param in model.decoder.named_parameters():
@@ -84,6 +85,12 @@ def get_model_and_auxiliaries(args):
 
     # count trainable parameters
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    print("++++++++++++++++learnable parameters++++++++++++++++++++")
+    for p in model.named_parameters():
+        if p[1].requires_grad:
+            print(p[0])
+    print("++++++++++++++++++++++++++++++++++++")
+
     num_trainable_params = sum([np.prod(p.size()) for p in model_parameters])
     print('Training a model with {} trainable parameters.'.format(num_trainable_params))
 
@@ -153,7 +160,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Model Training')
-    parser.add_argument("--features_dir", type=str, default="features/", help="Directory where cached input image features are stored")
+    parser.add_argument("--features_dir", type=str, default="image_features/", help="Directory where cached input image features are stored")
     parser.add_argument("--annotations_path", type=str, default="data/dataset_coco.json", help="JSON file with annotations in Karpathy splits")
     parser.add_argument("--experiments_dir", type=str, default="experiments/", help="Directory where trained models will be saved")
 
