@@ -48,7 +48,6 @@ def evaluate_rag_model(args, clipmodel, processor, tokenizer, model, eval_df):
     """RAG models can only be evaluated with a batch of length 1."""
     
     template = open(args.template_path).read().strip() + ' '
-
     if args.features_path is not None:
         features = h5py.File(args.features_path, 'r')
 
@@ -69,7 +68,6 @@ def evaluate_rag_model(args, clipmodel, processor, tokenizer, model, eval_df):
             # encoder_last_hidden_state = encoder_outputs[0] # last_hidden_state
             # encoder_last_hidden_state = model.text_projection(encoder_last_hidden_state) # (1, 77, 512) -> (1, 77, 768)
 
-            
             encoder_outputs = BaseModelOutput(last_hidden_state=encoder_last_hidden_state.to(args.device))
             with torch.no_grad():
                 pred = model.generate(encoder_outputs=encoder_outputs,
@@ -139,6 +137,8 @@ def main(args):
     
     if args.features_path is not None:
         feature_extractor = None
+        clipmodel = None
+        processor = None
     else:
         feature_extractor = CLIPFeatureExtractor.from_pretrained(args.encoder_name)
         clipmodel = CLIPModel.from_pretrained(args.encoder_name).to(args.device)

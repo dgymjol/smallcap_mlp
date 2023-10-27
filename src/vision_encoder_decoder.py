@@ -222,6 +222,7 @@ class SmallCap(PreTrainedModel):
         config: Optional[PretrainedConfig] = None,
         encoder: Optional[PreTrainedModel] = None,
         decoder: Optional[PreTrainedModel] = None,
+        args = None
     ):
         if config is None and (encoder is None or decoder is None):
             raise ValueError("Either a configuration or an encoder and a decoder has to be provided.")
@@ -259,14 +260,33 @@ class SmallCap(PreTrainedModel):
         self.encoder.config = self.config.encoder
         self.decoder.config = self.config.decoder
 
-        self.img2text = IM2TEXT()
-        self.clip_text_model = CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
-        self.clip_tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+        if args is None: # infer mode
+            encoder_name = config.encoder.name_or_path
+        else:
+            encoder_name = args.encoder_name
+
+        self.clip_text_model = CLIPTextModel.from_pretrained(encoder_name)
+        self.clip_tokenizer = AutoTokenizer.from_pretrained(encoder_name)
+    
         self.vocab_size = self.clip_text_model.config.vocab_size
         self.end_id = self.vocab_size - 1
         self.context_length=77
 
-        self.text_projection = TextProjection()
+        if encoder_name == 'openai/clip-vit-large-patch14':
+            self.img2text = IM2TEXT(embed_dim=768, middle_dim=512, output_dim=768)
+            self.text_projection = None
+        else:
+            self.img2text = IM2TEXT()
+            self.text_projection = TextProjection()
+            
+        if args is not None and not args.train_mlp:
+            img2text_weight = torch.load('pic2word.pt')['state_dict_img2text']
+            for key in list(img2text_weight.keys()):
+                new_key = key.replace("module.", "")
+                img2text_weight[new_key] = img2text_weight.pop(key)
+            self.img2text.load_state_dict(img2text_weight)
+            print("------- LOAD IMG2TEXT PRETRAINED WEIGHT")
+
 
     def get_encoder(self):
         return self.encoder
@@ -297,6 +317,7 @@ class SmallCap(PreTrainedModel):
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
         cross_attention_reduce_factor: int = None,
+        args=None,
         *model_args,
         **kwargs
     ) -> PreTrainedModel:
@@ -463,7 +484,7 @@ class SmallCap(PreTrainedModel):
 
         # make sure input & output embeddings is not tied
         config.tie_word_embeddings = False
-        return cls(encoder=encoder, decoder=decoder, config=config)
+        return cls(encoder=encoder, decoder=decoder, config=config, args=args)
 
     def encode_text_img(self, text_inputs, img_tokens):
         input_ids = torch.cat([text_inputs.input_ids, torch.zeros((1, 72))], dim=1).type(torch.LongTensor).cuda()
@@ -597,7 +618,8 @@ class SmallCap(PreTrainedModel):
             encoder_outputs = self.encode_text_img(text_inputs, token_features)  # (64, 77, 512)
             encoder_hidden_states = encoder_outputs[0] # last_hidden_state
 
-        encoder_hidden_states = self.text_projection(encoder_hidden_states) # (64, 77, 512) -> (64, 77, 768)
+        if self.text_projection is not None:
+            encoder_hidden_states = self.text_projection(encoder_hidden_states) # (64, 77, 512) -> (64, 77, 768)
 
         # else:
         encoder_attention_mask = None

@@ -14,11 +14,11 @@ from transformers import CLIPProcessor, CLIPModel
 logging.set_verbosity_error()
 
 data_dir = 'data/images/'
-features_dir = 'image_features/'
+features_dir = 'l14_features/'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-encoder_name = 'openai/clip-vit-base-patch32'
+encoder_name = 'openai/clip-vit-large-patch14'
 # feature_extractor = CLIPFeatureExtractor.from_pretrained(encoder_name) 
 # clip_encoder = CLIPVisionModel.from_pretrained(encoder_name).to(device)
 
@@ -58,7 +58,7 @@ def encode_split(data, split):
         # for cocoid, encoding in zip(cocoids, encodings):
             # h5py_file.create_dataset(str(cocoid), (50, 768), data=encoding)
         for cocoid, encoding in zip(cocoids, image_features):
-            h5py_file.create_dataset(str(cocoid), (512), data=encoding)
+            h5py_file.create_dataset(str(cocoid), (768), data=encoding)
 
 data = load_data()
 

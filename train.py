@@ -52,7 +52,7 @@ def get_model_and_auxiliaries(args):
     tokenizer.pad_token = PAD_TOKEN
     tokenizer.eos_token = EOS_TOKEN
 
-    model = SmallCap.from_encoder_decoder_pretrained(args.encoder_name, args.decoder_name, cross_attention_reduce_factor=cross_attention_reduce_factor)
+    model = SmallCap.from_encoder_decoder_pretrained(args.encoder_name, args.decoder_name, cross_attention_reduce_factor=cross_attention_reduce_factor, args=args)
     model.config.vocab_size = model.config.decoder.vocab_size
     model.config.decoder_start_token_id = None
     model.config.pad_token_id = tokenizer.pad_token_id 
@@ -69,8 +69,17 @@ def get_model_and_auxiliaries(args):
     # freeze parameters
     for param in model.encoder.parameters():
         param.requires_grad = False
+
     for param in model.clip_text_model.parameters():
         param.requires_grad = False
+
+    if not args.train_mlp:
+        print("====NOT TRAIN MLP")
+        for param in model.img2text.parameters():
+            param.requires_grad = False
+    else:
+        print("====TRAIN MLP")
+
     if "xglm" in args.decoder_name or "opt" in args.decoder_name:
         if not args.train_decoder:
                 for name, param in model.decoder.named_parameters():
@@ -181,6 +190,8 @@ if __name__ == '__main__':
     parser.add_argument("--gradient_steps", type=int, default=1, help="Number of gradient accumulation steps")
 
     parser.add_argument("--ablation_visual", action="store_true", default=False, help="Whether to blank visual features")
+
+    parser.add_argument("--train_mlp", action="store_true", default=False, help="if want to train mlp e2e")
 
     args = parser.parse_args()
 

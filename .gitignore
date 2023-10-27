@@ -134,3 +134,10 @@ coco_index
 coco_index_captions.json
 
 data
+
+
+**/rag_7M_gpt2/
+*.hdf5
+**/pycocoevalcap/
+*.pt
+*.npy

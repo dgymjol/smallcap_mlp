@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "env": {"name":"CUDA_VISIBLE_DEVICES", "value":"1"},
+            "program": "/workspace/smallcap_mlp/train.py",
+            "args": [
+                "--experiments_dir", "mlp_train_test", "--encoder_name", "openai/clip-vit-large-patch14", "--features_dir", "l14_features"
+                // "--model_path","exp_mlp_5e-4/rag_7M_gpt2", "--checkpoint_path","checkpoint-8856", "--infer_test"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
