@@ -192,6 +192,8 @@ if __name__ == '__main__':
     parser.add_argument("--ablation_visual", action="store_true", default=False, help="Whether to blank visual features")
 
     parser.add_argument("--train_mlp", action="store_true", default=False, help="if want to train mlp e2e")
+    parser.add_argument("--mlp_path", type=str, default="pic2word.pt", help="mlp pretrained weight file")
+
 
     args = parser.parse_args()
 

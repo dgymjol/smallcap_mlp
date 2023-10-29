@@ -195,7 +195,6 @@ class TextProjection(nn.Module):
         return self.fc_out(x)
 
 
-
 class SmallCapConfig(VisionEncoderDecoderConfig):
     model_type = "smallcap"
 
@@ -279,13 +278,13 @@ class SmallCap(PreTrainedModel):
             self.img2text = IM2TEXT()
             self.text_projection = TextProjection()
             
-        if args is not None and not args.train_mlp:
-            img2text_weight = torch.load('pic2word.pt')['state_dict_img2text']
+        if args is not None:
+            img2text_weight = torch.load(args.mlp_path)['state_dict_img2text']
             for key in list(img2text_weight.keys()):
                 new_key = key.replace("module.", "")
                 img2text_weight[new_key] = img2text_weight.pop(key)
             self.img2text.load_state_dict(img2text_weight)
-            print("------- LOAD IMG2TEXT PRETRAINED WEIGHT")
+            print("------- LOAD IMG2TEXT PRETRAINED WEIGHT : ", args.mlp_path)
 
 
     def get_encoder(self):
